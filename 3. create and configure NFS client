@@ -1,0 +1,66 @@
+just install the NFS utility depending on your System
+
+in your NFS server just configure it as a NFS Server and give an access on firewall
+
+on our cluster, we have to install a NFS client:
+do this command on all cluster 'sudo apt install nfs-common'
+
+to make sure do some mounting from nfs server
+
+How to deploy NFS Subdir External Provisioner to your cluster
+
+To note again, you must already have an NFS Server.
+With Helm
+
+Follow the instructions from the helm chart README.
+
+$ helm repo add nfs-subdir-external-provisioner https://kubernetes-sigs.github.io/nfs-subdir-external-provisioner/
+$ helm install nfs-subdir-external-provisioner nfs-subdir-external-provisioner/nfs-subdir-external-provisioner \
+    --set nfs.server=x.x.x.x \
+    --set nfs.path=/exported/path
+
+----------------------
+create test-claim.yaml
+----------------------
+kind: PersistentVolumeClaim
+apiVersion: v1
+metadata:
+  name: test-claim
+spec:
+  storageClassName: nfs-client
+  accessModes:
+    - ReadWriteMany
+  resources:
+    requests:
+      storage: 1Mi
+----------------------
+end code
+----------------------
+
+----------------------
+create test-pod.yaml
+----------------------
+kind: Pod
+apiVersion: v1
+metadata:
+  name: test-pod
+spec:
+  containers:
+  - name: test-pod
+    image: busybox:stable
+    command:
+      - "/bin/sh"
+    args:
+      - "-c"
+      - "touch /mnt/SUCCESS && exit 0 || exit 1"
+    volumeMounts:
+      - name: nfs-pvc
+        mountPath: "/mnt"
+  restartPolicy: "Never"
+  volumes:
+    - name: nfs-pvc
+      persistentVolumeClaim:
+        claimName: test-claim
+----------------------
+end code
+----------------------
